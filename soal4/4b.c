@@ -11,7 +11,7 @@ void *find_fact(void* arg)
   unsigned long long k = 1; 
 
   for (int i = 1; i <= data; i++)
-    k = k * i;
+    k = k + i;
 
   unsigned long long *p = (unsigned long long*)malloc(sizeof(unsigned long long)); 
   *p = k; 
@@ -50,7 +50,7 @@ int main()
     pthread_join(threads[i], &k);
     
     unsigned long long *p = (unsigned long long *)k;
-    printf("%-20llu ",*p);
+    printf("%-3llu ",*p);
     if ((i + 1) % 5 == 0)
       printf("\n"); 
   }

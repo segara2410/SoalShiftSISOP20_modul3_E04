@@ -5,11 +5,93 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <termios.h>
+#include <pthread.h>
+
 #define PORT 8080
   
+int space_scanner = 0;
+int space_pressed = 0;
+int sock = 0, valread;
+int running_game = 0;
+int screen = 1;
+
+static struct termios old, new;
+ 
+void initTermios(int echo)
+{
+  tcgetattr(0, &old);
+  new = old;
+  new.c_lflag &= ~ICANON;
+  new.c_lflag &= echo ? ECHO : ~ECHO;
+  tcsetattr(0, TCSANOW, &new);
+}
+ 
+void resetTermios(void) 
+{
+  tcsetattr(0, TCSANOW, &old);
+}
+
+char getch()
+{
+  char ch;
+  initTermios(0);
+  ch = getchar();
+  resetTermios();
+  return ch;
+}
+
+void *spaceScanner()
+{
+  while(running_game)
+    while(space_scanner)
+    {
+      if (getch() == 32)
+      {
+        space_pressed = 1;
+        space_scanner = 0;
+      }
+    }
+  pthread_exit(0);
+}
+
+void *runGame()
+{
+  running_game = 1;
+  while(1)
+  {
+    space_scanner = 1;
+    char buffer[1024] = {0};
+    char new_buffer[64] = "kosong";
+
+    if (space_pressed)
+    {
+      char hit[10] = "hit !!";
+      fflush(stdin);
+      strcpy(new_buffer, hit);
+      space_pressed = 0;
+    }
+
+    send(sock, new_buffer, strlen(new_buffer), 0 );
+    memset(new_buffer, 0, sizeof(new_buffer));
+    valread = read(sock, buffer, 1024);
+    if (strcmp(buffer, "kosongs") != 0 && strcmp(buffer, "Game berakhir kamu kalah") != 0 && strcmp(buffer, "Game berakhir kamu menang") != 0)
+      puts(buffer);
+
+    if (strcmp(buffer, "Game berakhir kamu kalah") == 0 || strcmp(buffer, "Game berakhir kamu menang") == 0)
+    {
+      puts(buffer);
+      screen = 2;
+      break;
+    }
+  }
+  space_scanner = 0;
+  running_game = 0;
+  pthread_exit(0);
+}
+
 int main(int argc, char const *argv[]) {
     struct sockaddr_in address;
-    int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -34,30 +116,88 @@ int main(int argc, char const *argv[]) {
 
     while(1)
     {
-      char cmd[100];
-      printf("1. Login\n2. Register\n   Choices : ");
-      scanf("%s", cmd);
-      send(sock, cmd , strlen(cmd), 0 );
-  
-      memset(buffer, 0, 99); 
-      valread = read(sock, buffer, 1024);
-      if (strcmp(buffer, "login") == 0 || strcmp(buffer, "register") == 0)
+      if (screen == 1)
       {
-        char userpass[1024] = {0};
-        char username[1024] = {0};
-        char password[1024] = {0};
+        char cmd[100];
+        memset(cmd, 0, sizeof(cmd)); 
+        printf("1. Login\n2. Register\n   Choices : ");
+        scanf("%s", cmd);
+        send(sock, cmd , strlen(cmd), 0 );
+        // printf("%s-\n", cmd);    
+        memset(buffer, 0, sizeof(buffer)); 
+        valread = read(sock, buffer, 1024);
+        // puts(buffer);
+        if (strcmp(buffer, "login") == 0 || strcmp(buffer, "register") == 0)
+        {
+          char userpass[1024] = {0};
+          char username[1024] = {0};
+          char password[1024] = {0};
 
-        printf("   Username : ");
-        scanf("%s", username);
-        printf("   Password : ");
-        scanf("%s", password);
-        sprintf(userpass, "%s - %s\n", username, password);
-        send(sock, userpass, strlen(userpass), 0 );
+          printf("   Username : ");
+          scanf("%s", username);
+          printf("   Password : ");
+          scanf("%s", password);
+          sprintf(userpass, "%s - %s\n", username, password);
+          send(sock, userpass, strlen(userpass), 0 );
+          
+          read(sock, buffer, 1024);
+          printf("   %s\n", buffer);
+        }      
+        else
+          printf("   %s\n", buffer);
+
+        if(strcmp(buffer, "Auth success") == 0)
+          screen = 2;
+      }
+      
+      if (screen == 2)
+      {
+        char cmd[100];
+        printf("1. Find Match\n2. Logout\n   Choices : ");
+        scanf("%s", cmd);
+        if (strcmp(cmd, "find") == 0)
+        {
+          send(sock, cmd , strlen(cmd), 0 );
+      
+          memset(buffer, 0, sizeof(buffer)); 
+          valread = read(sock, buffer, 1024);
+
+          if(strcmp(buffer, "Waiting for player ...") == 0)
+            printf("   %s\n", buffer);
+          
+          while(1)
+          {
+            if(strcmp(buffer, "Game dimulai silahkan tap tap secepat mungkin !!") == 0)
+             break;
+            else
+              read(sock, buffer, 1024);
+          }
+          screen = 3;
+        }
+        else if (strcmp(cmd, "logout") == 0)
+        {
+          send(sock, cmd , strlen(cmd), 0 );
+          screen = 1;
+        }
+        else
+          puts("invalid command");
+      }
+
+      if (screen == 3)
+      {
+        int health = 100;
+        printf("   %s\n", buffer);
+        memset(buffer, 0, sizeof(buffer));
         
+        space_scanner = 1;
+        pthread_t threads[2]; 
+        pthread_create(&threads[0], NULL, runGame, NULL);
+        pthread_create(&threads[1], NULL, spaceScanner, NULL);
+
+        pthread_join(threads[0], NULL);
+        pthread_cancel(threads[1]);
+        resetTermios();
         read(sock, buffer, 1024);
-        printf("   %s", buffer);
-      }      
-      else
-        printf("   %s", buffer);
+      }
     }
 }

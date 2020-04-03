@@ -50,7 +50,7 @@ int main()
     pthread_join(threads[i], &k);
     
     unsigned long long *p = (unsigned long long *)k;
-    printf("%-3llu ",*p);
+    printf("%-4llu ",*p);
     if ((i + 1) % 5 == 0)
       printf("\n"); 
   }

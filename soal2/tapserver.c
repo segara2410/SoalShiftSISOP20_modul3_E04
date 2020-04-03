@@ -165,9 +165,6 @@ void *createServer(void* arg)
 
         if(enemy != player_id && enemy != -1)
         {
-          health[player_id] = 100;
-          health[enemy] = 100;
-
           matchup[player_id] = enemy;
           matchup[enemy] = player_id;
           
@@ -186,8 +183,10 @@ void *createServer(void* arg)
         sleep(1);
       }
 
+      health[player_id] = 100;
       enemy = matchup[player_id];
 
+      while(health[enemy] != 100);
       strcpy(status, "Game dimulai silahkan tap tap secepat mungkin !!");
       send(new_socket, status, sizeof(status), 0);
 

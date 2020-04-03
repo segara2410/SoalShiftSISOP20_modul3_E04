@@ -117,6 +117,7 @@ void *createServer(void* arg)
         strcpy(login_message, "Auth success");
       else
         strcpy(login_message, "Auth failed");
+      puts(login_message);
 
       send(new_socket, login_message, strlen(login_message), 0); 
       memset(buffer, 0, sizeof(buffer)); 
@@ -229,7 +230,7 @@ void *createServer(void* arg)
     }
     else
     {
-      strcpy(buffer, "buffer invalid command");
+      strcpy(buffer, "invalid command");
       send(new_socket, buffer, sizeof(buffer), 0);
       memset(buffer, 0, sizeof(buffer)); 
     }

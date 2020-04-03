@@ -17,7 +17,7 @@ int running_game = 0;
 int screen = 1;
 
 static struct termios old, new;
- 
+
 void initTermios(int echo)
 {
   tcgetattr(0, &old);
@@ -120,34 +120,52 @@ int main(int argc, char const *argv[]) {
       {
         char cmd[100];
         memset(cmd, 0, sizeof(cmd)); 
-        printf("1. Login\n2. Register\n   Choices : ");
+        printf("1. Login\n");
+        printf("2. Register\n");
+        printf("   Choices : ");
+        fflush(stdout);
         scanf("%s", cmd);
+        
         send(sock, cmd , strlen(cmd), 0 );
-        // printf("%s-\n", cmd);    
-        memset(buffer, 0, sizeof(buffer)); 
         valread = read(sock, buffer, 1024);
-        // puts(buffer);
+
         if (strcmp(buffer, "login") == 0 || strcmp(buffer, "register") == 0)
         {
           char userpass[1024] = {0};
-          char username[1024] = {0};
-          char password[1024] = {0};
-
+          char username[128];
+          char password[128];
+          int f;
           printf("   Username : ");
-          scanf("%s", username);
+          scanf("%d", &f);
+          memset(username, 0, sizeof(username));
+          scanf("%[^\n]", username);
+
           printf("   Password : ");
-          scanf("%s", password);
+          memset(password, 0, sizeof(password));
+          scanf("%d", &f);
+          scanf("%[^\n]", password);
+
           sprintf(userpass, "%s - %s\n", username, password);
+          
           send(sock, userpass, strlen(userpass), 0 );
           
           read(sock, buffer, 1024);
-          printf("   %s\n", buffer);
+
+          if(strcmp(buffer, "Auth success") == 0)
+          {
+            printf("   Login success\n");
+            screen = 2;
+          }
+          else if(strcmp(buffer, "Auth failed") == 0)
+            printf("   Login failed\n");
+          else 
+            printf("   Register success\n");
+            
+          memset(buffer, 0, sizeof(buffer));
         }      
         else
           printf("   %s\n", buffer);
 
-        if(strcmp(buffer, "Auth success") == 0)
-          screen = 2;
       }
       
       if (screen == 2)

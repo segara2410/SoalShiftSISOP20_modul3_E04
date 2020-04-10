@@ -7,12 +7,14 @@ Kelompok E 04
 ## 1. Traizone & Pokezone
 >Source code file: [Soal1](https://github.com/segara2410/SoalShiftSISOP20_modul3_E04/tree/master/soal1)
 
-- Program Traizone merupakan `client` dan Pokezone merupakan `server`.
+- Program Traizone merupakan dan Pokezone merupakan dua program yang berjalan dengan IPC.
 - Traizone memiliki dua mode, yaitu normal dan capture.
-  - Mode normal untuk mencari pokemon dijalankan dengan `thread` tiap sepuluh detik.
+  - Mode normal untuk mencari pokemon dijalankan dengan `thread` tiap sepuluh detik dari `shared memory`, membuka pokedex untuk mengelola pokemon, membuka shop untuk membeli item dari `shared memory`.
+  - Mode Capture untuk Menangkap dan menggunakan item.
 - Pokezone memiliki tiga fitur
   - Fitur untuk mematikan traizone dan pokezone dijalankan dengan mengetikkan `shutdown`, menggunakan `fork-exec` di program main.
-  - Fitur untuk merandom pokemon dijalankan menggunakan `thread` tiap satu detik.
+  - Fitur untuk merandom pokemon dijalankan menggunakan `thread` tiap satu detik kemudian di share menggunakan `shared memory`.
+  - Fitur untuk merestock Item setuap sepuluh detik dengan `thread` kemudian di share menggunakan `shared memory`.
 
 ## 2. Tap Game
 >Source code file: [Soal2](https://github.com/segara2410/SoalShiftSISOP20_modul3_E04/tree/master/soal2)
@@ -39,7 +41,7 @@ Kelompok E 04
   - `\*` untuk kategorisasi di folder dimana program tersebut berada.
   - `-f` untuk kategorisasi file yang ditentukan.
   - `-d` untuk kategorisasi di folder yang ditentukan.
-- Pembuatan direktori untuk kategorisasi berdasarkan ekstensi tiap file.
+- Pembuatan direktori untuk kategorisasi berdasarkan ekstensi tiap file. Pengecekan ekstensi dan nama file menggunakan `strrchr`
 - Dalam kategorisasi tiap file diproses dengan `thread` berbeda-beda.
 
 ## 4. Teka-Teki Batu Mulia

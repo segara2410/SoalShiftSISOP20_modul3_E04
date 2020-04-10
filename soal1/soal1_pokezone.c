@@ -1,83 +1,20 @@
 #include <stdio.h>
-#include <sys/socket.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
 #include <pthread.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <string.h>
 
-#define PORT 8080
-int new_socket;
-
-int lullaby_powder_count = 100;
-int pokeball_count = 100;
-int berry_count = 100;
-
-int escape_rate; 
-int capture_rate;
-int pokedollar;
-
-char current_pokemon[20];
-char normal_pokemon[5][20] = { "Bulbasaur", "Charmander", "Squirtle", "Rattata", "Caterpie" };
-char rare_pokemon[5][20] = { "Pikachu", "Eevee", "Jigglypuff", "Snorlax", "Dragonite" };
-char legendary_pokemon[5][20] = { "Mew", "Mewtwo", "Moltres", "Zapdos", "Articuno" };
-char pokemon_message[50];
-
-void *handleRequest()
-{
-  while(1)
-  {
-    char buffer[1024] = {0};
-
-    memset(buffer, 0, sizeof(buffer)); 
-    int valread = read(new_socket, buffer, 1024);
-    if (strcmp(buffer, "request pokemon") == 0)
-      send(new_socket, pokemon_message, strlen(pokemon_message), 0);
-  }
-}
-
-void *randomPokemon()
-{
-  while(1)
-  {
-    int encounter_rate = rand() % 100 + 1;
-    int pokemon = rand() % 5;
-    int shiny = rand() % 8000 + 1;
-    
-    if (encounter_rate <= 80)
-    {
-      strcpy(current_pokemon, normal_pokemon[pokemon]);
-      escape_rate = 5;
-      capture_rate = 70;
-      pokedollar = 80;
-    }
-    else if (encounter_rate <= 95)
-    {
-      strcpy(current_pokemon, rare_pokemon[pokemon]);
-      escape_rate = 10;
-      capture_rate = 50;
-      pokedollar = 100;
-    }
-    else if (encounter_rate <= 100)
-    {
-      strcpy(current_pokemon, legendary_pokemon[pokemon]);
-      escape_rate = 20;
-      capture_rate = 30;
-      pokedollar = 200;
-    }
-
-    if (shiny == 1)
-    {
-      escape_rate += 5;
-      capture_rate -= 20;
-      pokedollar += 5000;
-    }
-
-    sprintf(pokemon_message, "%s %d %d %d", current_pokemon, escape_rate, capture_rate, pokedollar);
-    sleep(1);
-  }
-}
+int* shmpokemon;
+int* shmlp;
+int* shmpb;
+int* shmb;
 
 void killTraizone(int intpid)
 {
@@ -88,6 +25,7 @@ void killTraizone(int intpid)
       char * argv[] = {"killall", "soal1_traizone", NULL};
       execv("/usr/bin/killall", argv);
     }
+    wait(NULL);
     char pid[64];
     sprintf(pid, "%d", intpid);
     char * argv[] = {"kill", "-9", pid, NULL};
@@ -95,56 +33,93 @@ void killTraizone(int intpid)
   }
 }
 
-int main()
-{
-  int server_fd, valread;
-  struct sockaddr_in address;
-  int opt = 1;
-  int addrlen = sizeof(address);
-    
-  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-      perror("socket failed");
-      exit(EXIT_FAILURE);
-  }
-    
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-      perror("setsockopt");
-      exit(EXIT_FAILURE);
-  }
-
-  address.sin_family = AF_INET;
-  address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons( PORT );
-  
-  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
-      perror("bind failed");
-      exit(EXIT_FAILURE);
-  }
-
-  if (listen(server_fd, 3) < 0) {
-      perror("listen");
-      exit(EXIT_FAILURE);
-  }
-
-  if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
-      perror("accept");
-      exit(EXIT_FAILURE);
-  }
-
-  char cmd[1024];
-  printf("1. Shutdown Game\n");
-  int pid = getpid();
-
-  pthread_t threads[2];
-  pthread_create(&threads[0], NULL, randomPokemon, NULL);
-  pthread_create(&threads[1], NULL, handleRequest, NULL);
-
+void* restockItem() {
   while (1)
   {
-    scanf("%s", cmd);
-    if (strcmp(cmd, "shutdown") == 0)
-      killTraizone(pid);
+    sleep(10);
+    *shmlp += 10;
+    *shmpb += 10;
+    *shmb += 10;
+    
+    if (*shmlp > 200) 
+      *shmlp = 200;
+    if (*shmpb > 200) 
+      *shmpb = 200;
+    if (*shmb > 200) 
+      *shmb = 200;
+  }
+}
+
+void* randomPokemon() 
+{
+  int pokemon;
+	srand(time(NULL));
+  while (1) 
+  {
+    int r = rand() % 100;
+    if (r < 5) 
+      pokemon = (rand() % 5) + 10;
+    else if (r < 20)
+      pokemon = (rand() % 5) + 5;
     else
-      puts("invalid command");
+      pokemon = (rand() % 5);
+
+    if (rand() % 8000 == 0)
+      pokemon += 15;
+    
+    *shmpokemon = pokemon;
+    sleep(1);
+  }
+}
+
+int main() 
+{
+	key_t key1 = 2501;
+	key_t key2 = 2502;
+	key_t key3 = 2503;
+	key_t key4 = 2504;
+  
+  int shmidpokemon = shmget(key1, sizeof(int), IPC_CREAT | 0666);
+  int shmidlp = shmget(key2, sizeof(int), IPC_CREAT | 0666);
+  int shmidpb = shmget(key3, sizeof(int), IPC_CREAT | 0666);
+  int shmidb = shmget(key4, sizeof(int), IPC_CREAT | 0666);
+	
+  shmpokemon = shmat(shmidpokemon, NULL, 0);
+	shmlp = shmat(shmidlp, NULL, 0);
+	shmpb = shmat(shmidpb, NULL, 0);
+	shmb = shmat(shmidb, NULL, 0);
+
+  *shmpokemon = 100;
+  *shmlp = 100;
+  *shmpb = 100;
+  *shmb = 100;
+
+  pthread_t thread[2];
+  pthread_create(&thread[0], NULL, restockItem, NULL);
+  pthread_create(&thread[1], NULL, randomPokemon, NULL);
+  
+  int x;
+  while (1)
+  {
+    printf("1. Shutdown\nInput: ");
+    scanf("%d", &x);
+    
+    int pid = getpid();
+
+    if (x == 1)
+    {
+      shmdt(shmpokemon);
+      shmdt(shmlp);
+      shmdt(shmpb);
+      shmdt(shmb);
+      shmctl(shmidpokemon, IPC_RMID, NULL);
+      shmctl(shmidlp, IPC_RMID, NULL);
+      shmctl(shmidpb, IPC_RMID, NULL);
+      shmctl(shmidb, IPC_RMID, NULL);
+
+      killTraizone(pid);
+    }
+    else
+      puts ("invalid command");
   }
 }

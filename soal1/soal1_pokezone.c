@@ -33,23 +33,6 @@ void killTraizone(int intpid)
   }
 }
 
-void* restockItem() {
-  while (1)
-  {
-    sleep(10);
-    *shmlp += 10;
-    *shmpb += 10;
-    *shmb += 10;
-    
-    if (*shmlp > 200) 
-      *shmlp = 200;
-    if (*shmpb > 200) 
-      *shmpb = 200;
-    if (*shmb > 200) 
-      *shmb = 200;
-  }
-}
-
 void* randomPokemon() 
 {
   int pokemon;
@@ -72,36 +55,53 @@ void* randomPokemon()
   }
 }
 
+void* restockItem() {
+  while (1)
+  {
+    sleep(10);
+    *shmlp += 10;
+    *shmpb += 10;
+    *shmb += 10;
+    
+    if (*shmlp > 200) 
+      *shmlp = 200;
+    if (*shmpb > 200) 
+      *shmpb = 200;
+    if (*shmb > 200) 
+      *shmb = 200;
+  }
+}
+
 int main() 
 {
 	key_t key1 = 2501;
-	key_t key2 = 2502;
-	key_t key3 = 2503;
-	key_t key4 = 2504;
-  
   int shmidpokemon = shmget(key1, sizeof(int), IPC_CREAT | 0666);
-  int shmidlp = shmget(key2, sizeof(int), IPC_CREAT | 0666);
-  int shmidpb = shmget(key3, sizeof(int), IPC_CREAT | 0666);
-  int shmidb = shmget(key4, sizeof(int), IPC_CREAT | 0666);
-	
   shmpokemon = shmat(shmidpokemon, NULL, 0);
-	shmlp = shmat(shmidlp, NULL, 0);
-	shmpb = shmat(shmidpb, NULL, 0);
-	shmb = shmat(shmidb, NULL, 0);
-
   *shmpokemon = 100;
+
+	key_t key2 = 2502;
+  int shmidlp = shmget(key2, sizeof(int), IPC_CREAT | 0666);
+	shmlp = shmat(shmidlp, NULL, 0);
   *shmlp = 100;
+  
+	key_t key3 = 2503;
+  int shmidpb = shmget(key3, sizeof(int), IPC_CREAT | 0666);
+	shmpb = shmat(shmidpb, NULL, 0);
   *shmpb = 100;
+  
+	key_t key4 = 2504;  
+  int shmidb = shmget(key4, sizeof(int), IPC_CREAT | 0666);
+	shmb = shmat(shmidb, NULL, 0);
   *shmb = 100;
 
   pthread_t thread[2];
   pthread_create(&thread[0], NULL, restockItem, NULL);
   pthread_create(&thread[1], NULL, randomPokemon, NULL);
   
-  int x;
   while (1)
   {
     printf("1. Shutdown\nInput: ");
+    int x;
     scanf("%d", &x);
     
     int pid = getpid();
@@ -112,6 +112,7 @@ int main()
       shmdt(shmlp);
       shmdt(shmpb);
       shmdt(shmb);
+
       shmctl(shmidpokemon, IPC_RMID, NULL);
       shmctl(shmidlp, IPC_RMID, NULL);
       shmctl(shmidpb, IPC_RMID, NULL);

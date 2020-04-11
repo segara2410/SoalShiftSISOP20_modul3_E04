@@ -51,11 +51,11 @@ int shmidpokemon;
 int shmidlp;
 int shmidpb;
 int shmidb;
+
 int* shmpokemon;
 int* shmlp;
 int* shmpb;
 int* shmb;
-
 
 pthread_mutex_t pokeslotwrite;
 int pokeslot;
@@ -77,15 +77,31 @@ int berry;
 int effect;
 pthread_t lullabythread;
 
-void* lullabyHandler() 
+void* inputHandler()
 {
-	sleep(10);
-	effect = 0;
-	printf("Efek lullaby powder habis.\n");
-	pthread_exit(0);
+	scanf("%d", &input);
 }
 
-void* pokemonHandler() 
+void cleanup()
+{
+	shmdt(shmpokemon);
+	shmdt(shmlp);
+	shmdt(shmpb);
+	shmdt(shmb);
+
+	shmctl(shmidpokemon, IPC_RMID, NULL);
+	shmctl(shmidlp, IPC_RMID, NULL);
+	shmctl(shmidpb, IPC_RMID, NULL);
+	shmctl(shmidb, IPC_RMID, NULL);
+
+	pthread_mutex_destroy(&pokemonwrite);
+	pthread_mutex_destroy(&pokemoncapturewrite);
+	pthread_mutex_destroy(&pokeslotwrite);
+
+	exit(EXIT_SUCCESS);
+}
+
+void* pokemonHandler()
 {
 	int slot = pokeslot;
 	pthread_mutex_unlock(&pokeslotwrite);
@@ -113,7 +129,7 @@ void* pokemonHandler()
 	}
 }
 
-void* capturePokemon() 
+void* capturePokemonHandler() 
 {
 	int chance = (pokemon_capture % 15) / 5;
 	
@@ -135,6 +151,7 @@ void* capturePokemon()
 		if (rand() % 100 < chance) 
     {
 			printf("Pokemon telah escape dari pencarian pokemon.\n");
+
 			pthread_mutex_lock(&pokemoncapturewrite);
 			pokemon_capture = -1;
 			pthread_mutex_unlock(&pokemoncapturewrite);
@@ -154,7 +171,7 @@ void* cariHandler()
 			pthread_mutex_lock(&pokemoncapturewrite);
 			pokemon_capture = *shmpokemon;
 			pthread_mutex_unlock(&pokemoncapturewrite);
-			pthread_create(&pokemoncapturethread, NULL, capturePokemon, NULL);
+			pthread_create(&pokemoncapturethread, NULL, capturePokemonHandler, NULL);
 			mencari = 0;
 			mode = 1;
 			input = -1;
@@ -384,6 +401,14 @@ void capturePokemon()
 		printf("Tidak berhasil menangkap %s.\n", pokemon_list[pokemon_capture]);
 }
 
+void* lullabyHandler() 
+{
+	sleep(10);
+	effect = 0;
+	printf("Efek lullaby powder habis.\n");
+	pthread_exit(0);
+}
+
 void useItem()
 {
 	if (lullaby <= 0) 
@@ -411,51 +436,28 @@ void useItem()
 	}
 }
 
-void cleanup()
-{
-	shmdt(shmpokemon);
-	shmdt(shmlp);
-	shmdt(shmpb);
-	shmdt(shmb);
-
-	shmctl(shmidpokemon, IPC_RMID, NULL);
-	shmctl(shmidlp, IPC_RMID, NULL);
-	shmctl(shmidpb, IPC_RMID, NULL);
-	shmctl(shmidb, IPC_RMID, NULL);
-
-	pthread_mutex_destroy(&pokemonwrite);
-	pthread_mutex_destroy(&pokemoncapturewrite);
-	pthread_mutex_destroy(&pokeslotwrite);
-
-	exit(EXIT_SUCCESS);
-}
-
-void* inputHandler()
-{
-	scanf("%d", &input);
-}
-
 int main() 
 {
 	srand(time(NULL));
 	signal(SIGINT, cleanup);
 
 	key_t key1 = 2501;
-	key_t key2 = 2502;
-	key_t key3 = 2503;
-	key_t key4 = 2504;
-
-  int shmidpokemon = shmget(key1, sizeof(int), IPC_CREAT | 0666);
-  int shmidlp = shmget(key2, sizeof(int), IPC_CREAT | 0666);
-  int shmidpb = shmget(key3, sizeof(int), IPC_CREAT | 0666);
-  int shmidb = shmget(key4, sizeof(int), IPC_CREAT | 0666);
-
+  int shmidpokemon = shmget(ky1, sizeof(int), IPC_CREAT | 0666);
   shmpokemon = shmat(shmidpokemon, NULL, 0);
+
+	key_t key2 = 2502;
+  int shmidlp = shmget(key2, sizeof(int), IPC_CREAT | 0666);
 	shmlp = shmat(shmidlp, NULL, 0);
+
+	key_t key3 = 2503;
+  int shmidpb = shmget(key3, sizeof(int), IPC_CREAT | 0666);
 	shmpb = shmat(shmidpb, NULL, 0);
+
+	key_t key4 = 2504;
+  int shmidb = shmget(key4, sizeof(int), IPC_CREAT | 0666);
 	shmb = shmat(shmidb, NULL, 0);
-	
-  memset(pokemon, -1, sizeof(pokemon));
+
+	memset(pokemon, -1, sizeof(pokemon));
 	memset(pokemon_AP, -1, sizeof(pokemon_AP));
 	memset(pokemon_thread, 0, sizeof(pokemon_thread));
 

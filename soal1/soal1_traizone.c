@@ -309,7 +309,7 @@ void shop()
 	printf("Gagal membeli.\n");
 }
 
-void capturPokemon() 
+void capturePokemon() 
 {
 	if (pokemon_capture == -1)
   {
@@ -391,7 +391,7 @@ void useItem()
 		printf("Lullaby Powder tidak cukup.\n");
 		return;
 	}
-	if (effect) 
+	if (effect)
   {
 		printf("Efek lullaby powder masih ada.\n");
 		return;
@@ -454,15 +454,16 @@ int main()
 	shmlp = shmat(shmidlp, NULL, 0);
 	shmpb = shmat(shmidpb, NULL, 0);
 	shmb = shmat(shmidb, NULL, 0);
-
-	pokemon_capture = -1;
-	memset(pokemon, -1, sizeof(pokemon));
+	
+  memset(pokemon, -1, sizeof(pokemon));
 	memset(pokemon_AP, -1, sizeof(pokemon_AP));
 	memset(pokemon_thread, 0, sizeof(pokemon_thread));
+
 	pthread_mutex_init(&pokemonwrite, NULL);
 	pthread_mutex_init(&pokemoncapturewrite, NULL);
 	pthread_mutex_init(&pokeslotwrite, NULL);
 
+	pokemon_capture = -1;
 	mode = 0;
 	mencari = 0;
 	lullaby = 0;
@@ -516,7 +517,7 @@ int main()
     else if (mode == 1)
     {
 			if (choice == 1)
-				capturPokemon();
+				capturePokemon();
 			else if (choice == 2)
 				useItem();
 			else if (choice == 3)

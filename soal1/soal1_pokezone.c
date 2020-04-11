@@ -118,6 +118,7 @@ int main()
       shmctl(shmidb, IPC_RMID, NULL);
 
       killTraizone(pid);
+      sleep(1);
     }
     else
       puts ("invalid command");

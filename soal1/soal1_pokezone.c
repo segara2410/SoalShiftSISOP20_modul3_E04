@@ -55,7 +55,8 @@ void* randomPokemon()
   }
 }
 
-void* restockItem() {
+void* restockItem() 
+{
   while (1)
   {
     sleep(10);

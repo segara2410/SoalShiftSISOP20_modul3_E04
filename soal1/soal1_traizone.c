@@ -442,7 +442,7 @@ int main()
 	signal(SIGINT, cleanup);
 
 	key_t key1 = 2501;
-  int shmidpokemon = shmget(ky1, sizeof(int), IPC_CREAT | 0666);
+  int shmidpokemon = shmget(key1, sizeof(int), IPC_CREAT | 0666);
   shmpokemon = shmat(shmidpokemon, NULL, 0);
 
 	key_t key2 = 2502;
@@ -460,7 +460,6 @@ int main()
 	memset(pokemon, -1, sizeof(pokemon));
 	memset(pokemon_AP, -1, sizeof(pokemon_AP));
 	memset(pokemon_thread, 0, sizeof(pokemon_thread));
-
 	pthread_mutex_init(&pokemonwrite, NULL);
 	pthread_mutex_init(&pokemoncapturewrite, NULL);
 	pthread_mutex_init(&pokeslotwrite, NULL);
